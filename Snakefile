@@ -55,7 +55,7 @@ rule fastqc:
         join(QCDIR,"{sample}.R2_fastqc.zip"),
         join(QCDIR,"{sample}.R2_fastqc.html")
     shell:
-        '/share/work/shenjia/20180815_snakemake/software/FastQC/fastqc -f fastq -o %s {input.f1} {input.f2}'% (QCDIR)
+        'software/FastQC/fastqc -f fastq -o %s {input.f1} {input.f2}'% (QCDIR)
 
 #Mapping 
 rule map:
@@ -67,7 +67,7 @@ rule map:
     params:
         prefix="\"@RG\\tID:{sample}\\tLB:{sample}\\tPL:ILLUMINA\\tSM:{sample}\\tPU:ILLUMINA\""
     shell:
-        "/share/software/Alignment/bwa/bwa-0.7.13/bwa/bwa mem -t 8 %s {input.f1} {input.f2} -R {params.prefix}| /share/software/VariantCalling/samtools/samtools-1.3/samtools view -bS - -o {output}" % config["ref_hg19"]
+        "bwa/bwa-0.7.13/bwa/bwa mem -t 8 %s {input.f1} {input.f2} -R {params.prefix}| /share/software/VariantCalling/samtools/samtools-1.3/samtools view -bS - -o {output}" % config["ref_hg19"]
 
 
 #-R \"\@RG\\tID:{sample}\\tLB:{sample}\\tPL:ILLUMINA\\tSM:{sample}\\tPU:ILLUMINA\"
@@ -79,7 +79,7 @@ rule sortbam:
     output:
         join(BAMDIR,"{sample}.sort.bam")
     shell:
-        "/share/software/VariantCalling/samtools/samtools-1.3/samtools sort -@ 10 -m 2G {input} -o {output}"
+        "samtools-1.3/samtools sort -@ 10 -m 2G {input} -o {output}"
 
 
 
@@ -92,7 +92,7 @@ rule rmdup:
         index = join(BAMDIR,"{sample}.rmdup.bam.bai"),
         metrics = join(BAMDIR,"{sample}.rmdup.bam.metrics")
     shell:
-        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /share/software/VariantCalling/Picard/picard-tools-1.140/picard.jar MarkDuplicates I={input} O={output.bam} M={output.metrics};/share/software/VariantCalling/samtools/samtools-1.3/samtools index {output.bam}" % BAMDIR
+        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar picard-tools-1.140/picard.jar MarkDuplicates I={input} O={output.bam} M={output.metrics};/share/software/VariantCalling/samtools/samtools-1.3/samtools index {output.bam}" % BAMDIR
 #Quality control for BAM
 rule bamqc:
     input:
@@ -100,7 +100,7 @@ rule bamqc:
     output:
         join(BAMQCDIR,"{sample}.qc.tsv.gz")
     shell:
-        "/share/work/shenjia/20180815_snakemake/software/bamqc/alfred/alfred_v0.1.9_linux_x86_64bit qc -r %s -b %s -o {output} {input}" % (config["ref_hg19"],config["first_bed"])
+        "software/bamqc/alfred/alfred_v0.1.9_linux_x86_64bit qc -r %s -b %s -o {output} {input}" % (config["ref_hg19"],config["first_bed"])
 
 
 #calling using GATK
@@ -114,7 +114,7 @@ rule gatk_hc:
     output:
         join(CALLDIR,"{sample}.raw.{contig}.vcf")
     shell:
-        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /share/software/VariantCalling/GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T HaplotypeCaller -nct 8 -I {input.bam} -o {output} -L {input.bed} -R %s -G StandardAnnotation -G StandardHCAnnotation -G RankSumTest -G RMSAnnotation -A QualByDepth -A FisherStrand -A AlleleBalance -A Coverage -A MappingQualityZero -A TandemRepeatAnnotator -A VariantType -A DepthPerAlleleBySample -stand_call_conf 30.0 -rf BadCigar --dontUseSoftClippedBases" % (CALLDIR,config["ref_hg19"])
+        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T HaplotypeCaller -nct 8 -I {input.bam} -o {output} -L {input.bed} -R %s -G StandardAnnotation -G StandardHCAnnotation -G RankSumTest -G RMSAnnotation -A QualByDepth -A FisherStrand -A AlleleBalance -A Coverage -A MappingQualityZero -A TandemRepeatAnnotator -A VariantType -A DepthPerAlleleBySample -stand_call_conf 30.0 -rf BadCigar --dontUseSoftClippedBases" % (CALLDIR,config["ref_hg19"])
 
 rule merge_vcf:
     input:
@@ -127,7 +127,7 @@ rule merge_vcf:
         for one in input:
             seq = seq + " -V "+ one
        
-        os.system("java -cp /share/software/VariantCalling/GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar org.broadinstitute.gatk.tools.CatVariants -R %s %s -out %s" % (config["ref_hg19"],seq,output))
+        os.system("java -cp /GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar org.broadinstitute.gatk.tools.CatVariants -R %s %s -out %s" % (config["ref_hg19"],seq,output))
 
 
 rule extract_snp:
@@ -136,7 +136,7 @@ rule extract_snp:
     output:
         join(CALLDIR,"{sample}.snp.vcf")
     shell:
-        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /share/software/VariantCalling/GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T SelectVariants -R %s -V {input} --selectTypeToExclude INDEL -o {output}" % (CALLDIR,config["ref_hg19"])
+        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T SelectVariants -R %s -V {input} --selectTypeToExclude INDEL -o {output}" % (CALLDIR,config["ref_hg19"])
 
 rule extract_indel:
     input:
@@ -144,7 +144,7 @@ rule extract_indel:
     output:
         join(CALLDIR,"{sample}.indel.vcf")
     shell:
-        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /share/software/VariantCalling/GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T SelectVariants -R %s -V {input} --selectTypeToInclude INDEL -o {output}" % (CALLDIR,config["ref_hg19"])
+        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T SelectVariants -R %s -V {input} --selectTypeToInclude INDEL -o {output}" % (CALLDIR,config["ref_hg19"])
 
 rule filter_snp:
     input:
@@ -154,7 +154,7 @@ rule filter_snp:
     params:
         snp_f = '--filterExpression "QD < 2.0 || MQ < 40.0 || FS > 60.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0 || SOR > 3.0" --filterName "Standard" '
     shell:
-        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /share/software/VariantCalling/GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T VariantFiltration -R %s -V {input} -o {output} {params.snp_f}" % (CALLDIR,config["ref_hg19"])
+        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T VariantFiltration -R %s -V {input} -o {output} {params.snp_f}" % (CALLDIR,config["ref_hg19"])
 
 
 rule filter_indel:
@@ -165,7 +165,7 @@ rule filter_indel:
     params:
         indel_f = ' --filterExpression "QD < 2.0 || ReadPosRankSum < -20.0 || FS > 200.0 || SOR > 10.0" --filterName "Standard" '
     shell:
-        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar /share/software/VariantCalling/GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T VariantFiltration -R %s -V {input} -o {output} {params.indel_f}" % (CALLDIR,config["ref_hg19"])
+        "java -Xms5g -Xmx5g -Djava.io.tmpdir=%s -jar GATK/v3.8/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar -T VariantFiltration -R %s -V {input} -o {output} {params.indel_f}" % (CALLDIR,config["ref_hg19"])
 
 rule annotater_snp:
     input:
